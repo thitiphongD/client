@@ -83,16 +83,40 @@ export default function Home() {
           ))}
         </div>
 
-        <Card className="mt-8 text-left">
-          <CardHeader>
-            <CardTitle>🔍 System Info</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <div><strong>Admin:</strong> Can create system notifications & manage cron jobs</div>
-            <div><strong>User:</strong> Can view notifications & send user-to-user messages</div>
-            <div><strong>WebSocket:</strong> Real-time notifications for all users</div>
-          </CardContent>
-        </Card>
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <Card className="text-left">
+            <CardHeader>
+              <CardTitle>🔍 System Info</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <div><strong>Admin:</strong> Can create system notifications & manage cron jobs</div>
+              <div><strong>User:</strong> Can view notifications & send user-to-user messages</div>
+              <div><strong>WebSocket:</strong> Real-time notifications for all users</div>
+            </CardContent>
+          </Card>
+
+          <Card className="text-left">
+            <CardHeader>
+              <CardTitle>⚡ Quick Access</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <button
+                onClick={() => router.push('/cronjobs')}
+                className="w-full p-3 border rounded-lg hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="font-medium">⏰ CronJob Management</div>
+                <div className="text-sm text-gray-500">Create, edit, and monitor scheduled tasks</div>
+              </button>
+              <button
+                onClick={() => router.push('/admin')}
+                className="w-full p-3 border rounded-lg hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="font-medium">👑 Full Admin Panel</div>
+                <div className="text-sm text-gray-500">Complete notification system dashboard</div>
+              </button>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="mt-4 text-sm text-gray-500">
           Choose a user above to start testing the notification system
