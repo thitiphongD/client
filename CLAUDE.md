@@ -173,9 +173,9 @@ export const updateCronJob = (id, data) => fetch(...)
 - [ ] Error handling for WebSocket disconnect
 
 ## API Endpoints (Reference)
-- **Server**: `http://localhost:3001`
-- **WebSocket**: `ws://localhost:3001/ws`
-- **Docs**: `http://localhost:3001/swagger`
+- **Server**: `http://localhost:5006`
+- **WebSocket**: `ws://localhost:5006/ws`
+- **Docs**: `http://localhost:5006/swagger`
 
 ### Test Users (from seed data)
 - **user1** (admin): alice@example.com

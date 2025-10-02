@@ -15,12 +15,49 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000/ws'
+
+interface Message {
+  type: string
+  data?: Record<string, unknown>
+  timestamp: string
+}
+
+interface Notification {
+  id: string
+  title: string
+  message: string
+  type: 'info' | 'error' | 'warning' | 'success'
+  createdAt: string
+}
+
+const getNotificationStyles = (type: Notification['type']) => {
+  const styles = {
+    info: 'border-l-blue-500 bg-blue-50',
+    error: 'border-l-red-500 bg-red-50',
+    warning: 'border-l-yellow-500 bg-yellow-50',
+    success: 'border-l-green-500 bg-green-50'
+  }
+  return styles[type] || styles.info
+}
+
+const getNotificationIcon = (type: Notification['type']) => {
+  const icons = {
+    info: '📘',
+    error: '❌',
+    warning: '⚠️',
+    success: '✅'
+  }
+  return icons[type] || icons.info
+}
+
 export default function AdminDashboard() {
   const router = useRouter()
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const [messages, setMessages] = useState<any[]>([])
-  const [notifications, setNotifications] = useState<any[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [wsActivity, setWsActivity] = useState(0)
 
   // System Notification Form
@@ -42,6 +79,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     // Auto-connect as admin user (user1)
     connectWebSocket()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const connectWebSocket = () => {
@@ -50,7 +88,7 @@ export default function AdminDashboard() {
       socket.close()
     }
 
-    const ws = new WebSocket('ws://localhost:3001/ws')
+    const ws = new WebSocket(WS_URL)
     console.log('📡 Admin WebSocket created, waiting for connection...')
 
     ws.onopen = () => {
@@ -60,7 +98,7 @@ export default function AdminDashboard() {
       const registerMessage = { type: 'register', userId: 'user1' }
       console.log('📤 Admin sending register message:', registerMessage)
       ws.send(JSON.stringify(registerMessage))
-      addMessage({ type: 'connection', data: { message: `Connected as admin (user1)`, timestamp: new Date().toISOString() } })
+      addMessage({ type: 'connection', data: { message: `Connected as admin (user1)` }, timestamp: new Date().toISOString() })
       setWsActivity(prev => prev + 1)
     }
 
@@ -79,21 +117,21 @@ export default function AdminDashboard() {
     ws.onclose = () => {
       setIsConnected(false)
       setSocket(null)
-      addMessage({ type: 'connection', data: { message: 'Disconnected', timestamp: new Date().toISOString() } })
+      addMessage({ type: 'connection', data: { message: 'Disconnected' }, timestamp: new Date().toISOString() })
     }
 
     ws.onerror = () => {
-      addMessage({ type: 'error', data: { message: 'WebSocket error', timestamp: new Date().toISOString() } })
+      addMessage({ type: 'error', data: { message: 'WebSocket error' }, timestamp: new Date().toISOString() })
     }
   }
 
-  const addMessage = (message: any) => {
+  const addMessage = (message: Message) => {
     setMessages(prev => [...prev, { ...message, timestamp: new Date().toISOString() }])
   }
 
   const createSystemNotification = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/notifications', {
+      const response = await fetch(`${API_URL}/api/notifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -110,14 +148,14 @@ export default function AdminDashboard() {
         setSystemMessage('')
         setSystemScheduledDate(undefined)
         const scheduleText = systemScheduledDate ? ' and scheduled' : ' to all users'
-        addMessage({ type: 'api', data: { message: `✅ System notification created${scheduleText}`, timestamp: new Date().toISOString() } })
+        addMessage({ type: 'api', data: { message: `✅ System notification created${scheduleText}` }, timestamp: new Date().toISOString() })
       } else {
         const errorData = await response.json()
         const errorMessage = errorData.error || 'Failed to create notification'
-        addMessage({ type: 'error', data: { message: `❌ ${errorMessage}`, timestamp: new Date().toISOString() } })
+        addMessage({ type: 'error', data: { message: `❌ ${errorMessage}` }, timestamp: new Date().toISOString() })
       }
-    } catch (error) {
-      addMessage({ type: 'error', data: { message: '❌ Network error: Failed to create notification', timestamp: new Date().toISOString() } })
+    } catch {
+      addMessage({ type: 'error', data: { message: '❌ Network error: Failed to create notification' }, timestamp: new Date().toISOString() })
     }
   }
 
@@ -130,17 +168,17 @@ export default function AdminDashboard() {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/notifications/mark-all-read/user1', {
+      const response = await fetch(`${API_URL}/api/notifications/mark-all-read/user1`, {
         method: 'POST'
       })
 
       if (response.ok) {
         const data = await response.json()
         setNotifications([]) // Clear all notifications from UI
-        addMessage({ type: 'api', data: { message: `${data.message}`, timestamp: new Date().toISOString() } })
+        addMessage({ type: 'api', data: { message: `${data.message}` }, timestamp: new Date().toISOString() })
       }
-    } catch (error) {
-      addMessage({ type: 'error', data: { message: 'Failed to mark all as read', timestamp: new Date().toISOString() } })
+    } catch {
+      addMessage({ type: 'error', data: { message: 'Failed to mark all as read' }, timestamp: new Date().toISOString() })
     }
   }
 
@@ -285,7 +323,7 @@ export default function AdminDashboard() {
                 ⏰ Manage CronJobs
               </Button>
               <Button
-                onClick={() => window.open('http://localhost:3001/swagger', '_blank')}
+                onClick={() => window.open(`${API_URL}/swagger`, '_blank')}
                 variant="outline"
                 className="w-full justify-start"
               >
@@ -319,18 +357,23 @@ export default function AdminDashboard() {
               <ScrollArea className="h-60">
                 <div className="space-y-2">
                   {notifications.map((notif, index) => (
-                    <Card key={index} className="p-3 border-l-4">
-                      <div className="font-semibold">{notif.title}</div>
-                      <div className="text-sm text-muted-foreground">{notif.message}</div>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="text-xs text-muted-foreground">{new Date(notif.createdAt).toLocaleTimeString()}</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => markAsRead(notif.id)}
-                        >
-                          Mark Read
-                        </Button>
+                    <Card key={index} className={`p-3 border-l-4 ${getNotificationStyles(notif.type)}`}>
+                      <div className="flex items-start gap-2">
+                        <span className="text-xl">{getNotificationIcon(notif.type)}</span>
+                        <div className="flex-1">
+                          <div className="font-semibold">{notif.title}</div>
+                          <div className="text-sm text-muted-foreground">{notif.message}</div>
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-xs text-muted-foreground">{new Date(notif.createdAt).toLocaleTimeString()}</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => markAsRead(notif.id)}
+                            >
+                              Mark Read
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </Card>
                   ))}

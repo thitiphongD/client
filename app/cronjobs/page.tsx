@@ -14,6 +14,8 @@ import { Separator } from '@/components/ui/separator'
 import { format } from 'date-fns'
 import { Edit, Trash2, Play, Pause, Clock, X } from 'lucide-react'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+
 interface CronJob {
   id: string
   name: string
@@ -59,7 +61,7 @@ export default function CronJobsPage() {
 
   const fetchCronJobs = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/cronjobs')
+      const response = await fetch(`${API_URL}/api/config/cronjobs`)
       const data = await response.json()
       setCronJobs(data.cronJobs || [])
     } catch (error) {
@@ -257,7 +259,7 @@ export default function CronJobsPage() {
         finalCronExpression = `${localDateTime.getUTCMinutes()} ${localDateTime.getUTCHours()} ${localDateTime.getUTCDate()} ${localDateTime.getUTCMonth() + 1} *`
       }
 
-      const response = await fetch('http://localhost:3001/api/cronjobs', {
+      const response = await fetch(`${API_URL}/api/config/cronjobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -279,8 +281,8 @@ export default function CronJobsPage() {
         const errorMessage = errorData.error || 'Failed to create cronjob'
         alert(`❌ ${errorMessage}`)
       }
-    } catch (error) {
-      alert('❌ Network error: Failed to create cronjob')
+    } catch (error : any) {
+      alert(`❌ Network error: ${error.message}`)
     } finally {
       setIsCreating(false)
     }
@@ -291,7 +293,7 @@ export default function CronJobsPage() {
 
     setIsCreating(true)
     try {
-      const response = await fetch(`http://localhost:3001/api/cronjobs/${selectedJob.id}`, {
+      const response = await fetch(`${API_URL}/api/config/cronjobs/${selectedJob.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -313,7 +315,7 @@ export default function CronJobsPage() {
         const errorMessage = errorData.error || 'Failed to update cronjob'
         alert(`❌ ${errorMessage}`)
       }
-    } catch (error) {
+    } catch {
       alert('❌ Network error: Failed to update cronjob')
     } finally {
       setIsCreating(false)
@@ -322,7 +324,7 @@ export default function CronJobsPage() {
 
   const toggleCronJob = async (jobId: string, action: 'start' | 'stop') => {
     try {
-      const response = await fetch(`http://localhost:3001/api/cronjobs/${jobId}/${action}`, {
+      const response = await fetch(`${API_URL}/api/config/cronjobs/${jobId}/${action}`, {
         method: 'POST'
       })
 
@@ -332,7 +334,7 @@ export default function CronJobsPage() {
       } else {
         alert(`❌ Failed to ${action} cronjob`)
       }
-    } catch (error) {
+    } catch {
       alert(`❌ Network error: Failed to ${action} cronjob`)
     }
   }
@@ -341,7 +343,7 @@ export default function CronJobsPage() {
     if (!confirm(`Are you sure you want to delete "${jobName}"?`)) return
 
     try {
-      const response = await fetch(`http://localhost:3001/api/cronjobs/${jobId}`, {
+      const response = await fetch(`${API_URL}/api/config/cronjobs/${jobId}`, {
         method: 'DELETE'
       })
 
@@ -354,7 +356,7 @@ export default function CronJobsPage() {
       } else {
         alert('❌ Failed to delete cronjob')
       }
-    } catch (error) {
+    } catch {
       alert('❌ Network error: Failed to delete cronjob')
     }
   }
@@ -363,7 +365,7 @@ export default function CronJobsPage() {
     if (!confirm(`Execute "${jobName}" now?`)) return
 
     try {
-      const response = await fetch(`http://localhost:3001/api/cronjobs/${jobId}/execute`, {
+      const response = await fetch(`${API_URL}/api/config/cronjobs/${jobId}/execute`, {
         method: 'POST'
       })
 
@@ -372,7 +374,7 @@ export default function CronJobsPage() {
       } else {
         alert('❌ Failed to execute job')
       }
-    } catch (error) {
+    } catch {
       alert('❌ Network error: Failed to execute job')
     }
   }

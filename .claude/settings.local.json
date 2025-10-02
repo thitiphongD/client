@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/samutpra/Documents/GitHub/thitiphongD/demo/**)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "Bash(bun run:*)",
+      "Read(//Users/samutpra/Documents/GitHub/carmensoftware-organize/carmen-turborepo-backend/apps/backend-gateway/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

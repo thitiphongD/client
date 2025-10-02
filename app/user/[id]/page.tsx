@@ -2,11 +2,55 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000'
+
 interface User {
   id: string
   name: string
   role: string
   email: string
+}
+
+interface Message {
+  type: string
+  data?: Record<string, unknown>
+  timestamp: string
+}
+
+interface Notification {
+  id: string
+  title: string
+  message: string
+  type: 'info' | 'error' | 'warning' | 'success'
+  createdAt: string
+}
+
+interface CronJob {
+  id: string
+  name: string
+  cronExpression: string
+  isActive: boolean
+}
+
+const getNotificationStyles = (type: Notification['type']) => {
+  const styles = {
+    info: 'border-l-blue-500 bg-blue-50',
+    error: 'border-l-red-500 bg-red-50',
+    warning: 'border-l-yellow-500 bg-yellow-50',
+    success: 'border-l-green-500 bg-green-50'
+  }
+  return styles[type] || styles.info
+}
+
+const getNotificationIcon = (type: Notification['type']) => {
+  const icons = {
+    info: '📘',
+    error: '❌',
+    warning: '⚠️',
+    success: '✅'
+  }
+  return icons[type] || icons.info
 }
 
 export default function UserDashboard() {
@@ -17,8 +61,8 @@ export default function UserDashboard() {
   const [user, setUser] = useState<User | null>(null)
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const [messages, setMessages] = useState<any[]>([])
-  const [notifications, setNotifications] = useState<any[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [wsActivity, setWsActivity] = useState(0)
 
   // Form states
@@ -31,7 +75,7 @@ export default function UserDashboard() {
   const [userType, setUserType] = useState('info')
   const [recipientId, setRecipientId] = useState('user2')
 
-  const [cronJobs, setCronJobs] = useState<any[]>([])
+  const [cronJobs, setCronJobs] = useState<CronJob[]>([])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -46,7 +90,7 @@ export default function UserDashboard() {
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const response = await fetch('http://localhost:3001/')
+        const response = await fetch(`${API_URL}/api/auth/test-notification`)
         const data = await response.json()
         const foundUser = data.users.available.find((u: User) => u.id === userId)
         if (foundUser) {
@@ -67,6 +111,7 @@ export default function UserDashboard() {
     }
 
     fetchUserInfo()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, router])
 
   const connectWebSocket = () => {
@@ -75,7 +120,7 @@ export default function UserDashboard() {
       socket.close()
     }
 
-    const ws = new WebSocket('ws://localhost:3001/ws')
+    const ws = new WebSocket(WS_URL)
     console.log('📡 WebSocket created, waiting for connection...')
 
     ws.onopen = () => {
@@ -85,7 +130,7 @@ export default function UserDashboard() {
       const registerMessage = { type: 'register', userId }
       console.log('📤 Sending register message:', registerMessage)
       ws.send(JSON.stringify(registerMessage))
-      addMessage({ type: 'connection', data: { message: `Connected as ${userId}`, timestamp: new Date().toISOString() } })
+      addMessage({ type: 'connection', data: { message: `Connected as ${userId}` }, timestamp: new Date().toISOString() })
       setWsActivity(prev => prev + 1)
     }
 
@@ -106,31 +151,31 @@ export default function UserDashboard() {
     ws.onclose = () => {
       setIsConnected(false)
       setSocket(null)
-      addMessage({ type: 'connection', data: { message: 'Disconnected', timestamp: new Date().toISOString() } })
+      addMessage({ type: 'connection', data: { message: 'Disconnected' }, timestamp: new Date().toISOString() })
     }
 
     ws.onerror = () => {
-      addMessage({ type: 'error', data: { message: 'WebSocket error', timestamp: new Date().toISOString() } })
+      addMessage({ type: 'error', data: { message: 'WebSocket error' }, timestamp: new Date().toISOString() })
     }
   }
 
-  const addMessage = (message: any) => {
+  const addMessage = (message: Message) => {
     setMessages(prev => [...prev, { ...message, timestamp: new Date().toISOString() }])
   }
 
   const fetchCronJobs = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/cronjobs')
+      const response = await fetch(`${API_URL}/api/config/cronjobs`)
       const data = await response.json()
       setCronJobs(data.cronJobs)
-    } catch (error) {
-      console.error('Failed to fetch cronjobs:', error)
+    } catch {
+      console.error('Failed to fetch cronjobs')
     }
   }
 
   const createSystemNotification = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/notifications', {
+      const response = await fetch(`${API_URL}/api/notifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -144,16 +189,16 @@ export default function UserDashboard() {
       if (response.ok) {
         setSystemTitle('')
         setSystemMessage('')
-        addMessage({ type: 'api', data: { message: 'System notification created (should appear in real-time)', timestamp: new Date().toISOString() } })
+        addMessage({ type: 'api', data: { message: 'System notification created (should appear in real-time)' }, timestamp: new Date().toISOString() })
       }
-    } catch (error) {
-      addMessage({ type: 'error', data: { message: 'Failed to create notification', timestamp: new Date().toISOString() } })
+    } catch {
+      addMessage({ type: 'error', data: { message: 'Failed to create notification' }, timestamp: new Date().toISOString() })
     }
   }
 
   const createUserNotification = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/notifications', {
+      const response = await fetch(`${API_URL}/api/notifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -169,25 +214,25 @@ export default function UserDashboard() {
       if (response.ok) {
         setUserTitle('')
         setUserMessage('')
-        addMessage({ type: 'api', data: { message: `User notification sent to ${recipientId} (check their dashboard for real-time update)`, timestamp: new Date().toISOString() } })
+        addMessage({ type: 'api', data: { message: `User notification sent to ${recipientId} (check their dashboard for real-time update)` }, timestamp: new Date().toISOString() })
       }
-    } catch (error) {
-      addMessage({ type: 'error', data: { message: 'Failed to create notification', timestamp: new Date().toISOString() } })
+    } catch {
+      addMessage({ type: 'error', data: { message: 'Failed to create notification' }, timestamp: new Date().toISOString() })
     }
   }
 
   const toggleCronJob = async (jobId: string, action: 'start' | 'stop') => {
     try {
-      const response = await fetch(`http://localhost:3001/api/cronjobs/${jobId}/${action}`, {
+      const response = await fetch(`${API_URL}/api/config/cronjobs/${jobId}/${action}`, {
         method: 'POST'
       })
 
       if (response.ok) {
-        addMessage({ type: 'api', data: { message: `CronJob ${action}ed (status update should appear in real-time)`, timestamp: new Date().toISOString() } })
+        addMessage({ type: 'api', data: { message: `CronJob ${action}ed (status update should appear in real-time)` }, timestamp: new Date().toISOString() })
         fetchCronJobs()
       }
-    } catch (error) {
-      addMessage({ type: 'error', data: { message: `Failed to ${action} cronjob`, timestamp: new Date().toISOString() } })
+    } catch {
+      addMessage({ type: 'error', data: { message: `Failed to ${action} cronjob` }, timestamp: new Date().toISOString() })
     }
   }
 
@@ -200,17 +245,17 @@ export default function UserDashboard() {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/notifications/mark-all-read/${userId}`, {
+      const response = await fetch(`${API_URL}/api/notifications/mark-all-read/${userId}`, {
         method: 'POST'
       })
 
       if (response.ok) {
         const data = await response.json()
         setNotifications([]) // Clear all notifications from UI
-        addMessage({ type: 'api', data: { message: `${data.message}`, timestamp: new Date().toISOString() } })
+        addMessage({ type: 'api', data: { message: `${data.message}` }, timestamp: new Date().toISOString() })
       }
-    } catch (error) {
-      addMessage({ type: 'error', data: { message: 'Failed to mark all as read', timestamp: new Date().toISOString() } })
+    } catch {
+      addMessage({ type: 'error', data: { message: 'Failed to mark all as read' }, timestamp: new Date().toISOString() })
     }
   }
 
@@ -388,17 +433,22 @@ export default function UserDashboard() {
             </div>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {notifications.map((notif, index) => (
-                <div key={index} className="p-3 rounded border-l-4 border-gray-300">
-                  <div className="font-semibold">{notif.title}</div>
-                  <div className="text-sm text-gray-600">{notif.message}</div>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-gray-500">{new Date(notif.createdAt).toLocaleTimeString()}</span>
-                    <button
-                      onClick={() => markAsRead(notif.id)}
-                      className="text-xs px-2 py-1 border rounded hover:opacity-70"
-                    >
-                      Mark Read
-                    </button>
+                <div key={index} className={`p-3 rounded border-l-4 ${getNotificationStyles(notif.type)}`}>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xl">{getNotificationIcon(notif.type)}</span>
+                    <div className="flex-1">
+                      <div className="font-semibold">{notif.title}</div>
+                      <div className="text-sm text-gray-600">{notif.message}</div>
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-xs text-gray-500">{new Date(notif.createdAt).toLocaleTimeString()}</span>
+                        <button
+                          onClick={() => markAsRead(notif.id)}
+                          className="text-xs px-2 py-1 border rounded hover:opacity-70"
+                        >
+                          Mark Read
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}

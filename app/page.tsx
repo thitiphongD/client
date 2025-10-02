@@ -4,6 +4,12 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+
+// Debug: Log immediately when module loads
+console.log('📦 Module load - NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL)
+console.log('📦 Module load - API_URL:', API_URL)
+
 interface User {
   id: string
   name: string
@@ -19,11 +25,14 @@ export default function Home() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('http://localhost:3001/')
+        console.log('🔍 API_URL:', API_URL)
+        console.log('🔍 NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL)
+        const response = await fetch(`${API_URL}/api/auth/test-notification`)
         const data = await response.json()
         setUsers(data.users.available)
       } catch (error) {
         console.error('Failed to fetch users:', error)
+        console.error('API_URL was:', API_URL)
       } finally {
         setLoading(false)
       }
