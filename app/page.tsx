@@ -54,7 +54,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="max-w-2xl mx-auto text-center">
-        <h1 className="text-4xl font-bold mb-2">🚀 Notification System</h1>
+        <h1 className="text-4xl font-bold mb-2">Notification System</h1>
         <p className="text-xl mb-8">Select a user to view their dashboard</p>
 
         <div className="grid gap-4 md:grid-cols-3">
