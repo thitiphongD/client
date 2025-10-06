@@ -7,8 +7,8 @@ const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000'
 
 interface User {
   id: string
-  name: string
-  role: string
+  is_active: boolean
+  platform_role: string
   email: string
 }
 
@@ -23,7 +23,7 @@ interface Notification {
   title: string
   message: string
   type: 'info' | 'error' | 'warning' | 'success'
-  createdAt: string
+  created_at: string
 }
 
 interface CronJob {
@@ -56,7 +56,7 @@ const getNotificationIcon = (type: Notification['type']) => {
 export default function UserDashboard() {
   const params = useParams()
   const router = useRouter()
-  const userId = params.id as string
+  const user_id = params.id as string
 
   const [user, setUser] = useState<User | null>(null)
   const [socket, setSocket] = useState<WebSocket | null>(null)
@@ -76,6 +76,7 @@ export default function UserDashboard() {
   const [recipientId, setRecipientId] = useState('user2')
 
   const [cronJobs, setCronJobs] = useState<CronJob[]>([])
+  const [allUsers, setAllUsers] = useState<User[]>([])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -92,13 +93,14 @@ export default function UserDashboard() {
       try {
         const response = await fetch(`${API_URL}/api/auth/test-notification`)
         const data = await response.json()
-        const foundUser = data.users.available.find((u: User) => u.id === userId)
+        setAllUsers(data || [])
+        const foundUser = data?.find((u: User) => u.id === user_id)
         if (foundUser) {
           setUser(foundUser)
           // Auto-connect WebSocket for this user
           connectWebSocket()
           // Fetch cronjobs if admin
-          if (foundUser.role === 'admin') {
+          if (foundUser.platform_role === 'platform_admin') {
             fetchCronJobs()
           }
         } else {
@@ -112,7 +114,7 @@ export default function UserDashboard() {
 
     fetchUserInfo()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, router])
+  }, [user_id, router])
 
   const connectWebSocket = () => {
     console.log('🔌 Attempting to connect WebSocket...')
@@ -127,10 +129,10 @@ export default function UserDashboard() {
       console.log('✅ WebSocket connected successfully!')
       setIsConnected(true)
       setSocket(ws)
-      const registerMessage = { type: 'register', userId }
+      const registerMessage = { type: 'register', user_id: user_id }
       console.log('📤 Sending register message:', registerMessage)
       ws.send(JSON.stringify(registerMessage))
-      addMessage({ type: 'connection', data: { message: `Connected as ${userId}` }, timestamp: new Date().toISOString() })
+      addMessage({ type: 'connection', data: { message: `Connected as ${user_id}` }, timestamp: new Date().toISOString() })
       setWsActivity(prev => prev + 1)
     }
 
@@ -202,8 +204,8 @@ export default function UserDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: recipientId,
-          senderId: userId,
+          to_user_id: recipientId,
+          from_user_id: user_id,
           title: userTitle,
           message: userMessage,
           type: userType,
@@ -245,7 +247,7 @@ export default function UserDashboard() {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/notifications/mark-all-read/${userId}`, {
+      const response = await fetch(`${API_URL}/api/notifications/mark-all-read/${user_id}`, {
         method: 'POST'
       })
 
@@ -275,12 +277,12 @@ export default function UserDashboard() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">
-            {user.role === 'admin' ? '👑' : '👤'} {user.name} Dashboard
+            {user.platform_role === 'admin' ? '👑' : '👤'} {user.is_active} Dashboard
           </h1>
-          <p className="text-gray-600">{user.email} • {user.role}</p>
+          <p className="text-gray-600">{user.email} • {user.platform_role}</p>
         </div>
         <div className="flex gap-2">
-          {user.role === 'admin' && (
+          {user.platform_role === 'admin' && (
             <button
               onClick={() => router.push('/admin')}
               className="px-4 py-2 border rounded hover:opacity-70"
@@ -316,7 +318,7 @@ export default function UserDashboard() {
         {/* Left Panel - Forms */}
         <div className="space-y-6">
           {/* Admin Only - System Notification */}
-          {user.role === 'admin' && (
+          {user.platform_role === 'admin' && (
             <div className="p-4 border rounded-lg">
               <h3 className="text-lg font-semibold mb-4">📢 System Notification (Broadcast to All)</h3>
               <div className="space-y-3">
@@ -355,9 +357,11 @@ export default function UserDashboard() {
             <h3 className="text-lg font-semibold mb-4">💬 User-to-User Notification</h3>
             <div className="space-y-3">
               <select value={recipientId} onChange={(e) => setRecipientId(e.target.value)} className="w-full px-3 py-2 border rounded">
-                <option value="user1">Send to user1 (Alice)</option>
-                <option value="user2">Send to user2 (Bob)</option>
-                <option value="user3">Send to user3 (Charlie)</option>
+                {allUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    Send to {u.email} ({u.platform_role})
+                  </option>
+                ))}
               </select>
               <input
                 type="text"
@@ -389,7 +393,7 @@ export default function UserDashboard() {
           </div>
 
           {/* Admin Only - CronJob Management */}
-          {user.role === 'admin' && (
+          {user.platform_role === 'admin' && (
             <div className="p-4 border rounded-lg">
               <h3 className="text-lg font-semibold mb-4">⏰ CronJob Management</h3>
               <div className="space-y-2">
@@ -440,7 +444,7 @@ export default function UserDashboard() {
                       <div className="font-semibold">{notif.title}</div>
                       <div className="text-sm text-gray-600">{notif.message}</div>
                       <div className="flex justify-between items-center mt-2">
-                        <span className="text-xs text-gray-500">{new Date(notif.createdAt).toLocaleTimeString()}</span>
+                        <span className="text-xs text-gray-500">{new Date(notif.created_at).toLocaleTimeString()}</span>
                         <button
                           onClick={() => markAsRead(notif.id)}
                           className="text-xs px-2 py-1 border rounded hover:opacity-70"

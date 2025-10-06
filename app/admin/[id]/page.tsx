@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,7 +29,7 @@ interface Notification {
   title: string
   message: string
   type: 'info' | 'error' | 'warning' | 'success'
-  createdAt: string
+  created_at: string
 }
 
 const getNotificationStyles = (type: Notification['type']) => {
@@ -53,7 +53,9 @@ const getNotificationIcon = (type: Notification['type']) => {
 }
 
 export default function AdminDashboard() {
+  const params = useParams()
   const router = useRouter()
+  const user_id = params.id as string
   const [socket, setSocket] = useState<WebSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -77,7 +79,6 @@ export default function AdminDashboard() {
   }, [messages, notifications])
 
   useEffect(() => {
-    // Auto-connect as admin user (user1)
     connectWebSocket()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -95,10 +96,10 @@ export default function AdminDashboard() {
       console.log('✅ Admin WebSocket connected successfully!')
       setIsConnected(true)
       setSocket(ws)
-      const registerMessage = { type: 'register', userId: 'user1' }
+      const registerMessage = { type: 'register', user_id: user_id }
       console.log('📤 Admin sending register message:', registerMessage)
       ws.send(JSON.stringify(registerMessage))
-      addMessage({ type: 'connection', data: { message: `Connected as admin (user1)` }, timestamp: new Date().toISOString() })
+      addMessage({ type: 'connection', data: { message: `Connected as admin (user ${user_id}))` }, timestamp: new Date().toISOString() })
       setWsActivity(prev => prev + 1)
     }
 
@@ -139,7 +140,7 @@ export default function AdminDashboard() {
           message: systemMessage,
           type: systemType,
           category: 'system',
-          scheduledAt: systemScheduledDate?.toISOString()
+          scheduled_at: systemScheduledDate?.toISOString()
         })
       })
 
@@ -166,9 +167,9 @@ export default function AdminDashboard() {
     }
   }
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = async (user_admin_id : string) => {
     try {
-      const response = await fetch(`${API_URL}/api/notifications/mark-all-read/user1`, {
+      const response = await fetch(`${API_URL}/api/notifications/mark-all-read/${user_admin_id}`, {
         method: 'POST'
       })
 
@@ -344,7 +345,7 @@ export default function AdminDashboard() {
                   <CardDescription>{notifications.length} notifications received</CardDescription>
                 </div>
                 <Button
-                  onClick={markAllAsRead}
+                  onClick={() => markAllAsRead(user_id)}
                   variant="outline"
                   size="sm"
                   disabled={notifications.length === 0}
@@ -364,7 +365,7 @@ export default function AdminDashboard() {
                           <div className="font-semibold">{notif.title}</div>
                           <div className="text-sm text-muted-foreground">{notif.message}</div>
                           <div className="flex justify-between items-center mt-2">
-                            <span className="text-xs text-muted-foreground">{new Date(notif.createdAt).toLocaleTimeString()}</span>
+                            <span className="text-xs text-muted-foreground">{new Date(notif.created_at).toLocaleTimeString()}</span>
                             <Button
                               size="sm"
                               variant="outline"

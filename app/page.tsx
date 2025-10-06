@@ -1,54 +1,57 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { API_URL, listAllUsers, User } from "@/lib/listAllUser";
 
 // Debug: Log immediately when module loads
-console.log('📦 Module load - NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL)
-console.log('📦 Module load - API_URL:', API_URL)
-
-interface User {
-  id: string
-  name: string
-  role: string
-  email: string
-}
+console.log(
+  "📦 Module load - NEXT_PUBLIC_API_URL:",
+  process.env.NEXT_PUBLIC_API_URL
+);
+console.log("📦 Module load - API_URL:", API_URL);
 
 export default function Home() {
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        console.log('🔍 API_URL:', API_URL)
-        console.log('🔍 NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL)
-        const response = await fetch(`${API_URL}/api/auth/test-notification`)
-        const data = await response.json()
-        setUsers(data.users.available)
+        console.log("🔍 API_URL:", API_URL);
+        console.log("🔍 NEXT_PUBLIC_API_URL:", process.env.NEXT_PUBLIC_API_URL);
+        const data = await listAllUsers();
+        console.log("✅ Fetched users:", data);
+        setUsers(data || []);
       } catch (error) {
-        console.error('Failed to fetch users:', error)
-        console.error('API_URL was:', API_URL)
+        console.error("Failed to fetch users:", error);
+        console.error("API_URL was:", API_URL);
+        setUsers([]);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchUsers()
-  }, [])
+    fetchUsers();
+  }, []);
 
-  const selectUser = (userId: string) => {
-    const user = users.find(u => u.id === userId)
-    if (user?.role === 'admin') {
-      router.push('/admin')
+  const selectUser = (user_id: string) => {
+    console.log("User selected:", user_id);
+    const user = users.find((u) => u.id === user_id);
+    if (user?.platform_role === "platform_admin") {
+      router.push(`/admin/${user_id}`);
     } else {
-      router.push(`/user/${userId}`)
+      router.push(`/user/${user_id}`);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -57,7 +60,7 @@ export default function Home() {
           <div className="text-2xl mb-4">🔄 Loading...</div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -75,18 +78,19 @@ export default function Home() {
             >
               <CardHeader className="text-center">
                 <div className="text-3xl mb-2">
-                  {user.role === 'admin' ? '👑' : '👤'}
+                  {user.platform_role === "platform_admin" ? "👑" : "👤"}
                 </div>
-                <CardTitle>{user.name}</CardTitle>
-                <CardDescription>{user.email}</CardDescription>
+                <CardTitle>{user.email}</CardTitle>
+                <CardDescription>
+                  {user.platform_role === "platform_admin"
+                    ? "Admin Panel"
+                    : "User Dashboard"}
+                </CardDescription>
               </CardHeader>
               <CardContent className="text-center">
-                <Badge variant="outline" className="mb-2">
-                  {user.role}
+                <Badge variant="outline">
+                  {user.platform_role}
                 </Badge>
-                <div className="text-xs">
-                  {user.role === 'admin' ? 'Click to open Admin Panel' : 'Click to open User Dashboard'}
-                </div>
               </CardContent>
             </Card>
           ))}
@@ -98,9 +102,18 @@ export default function Home() {
               <CardTitle>🔍 System Info</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1">
-              <div><strong>Admin:</strong> Can create system notifications & manage cron jobs</div>
-              <div><strong>User:</strong> Can view notifications & send user-to-user messages</div>
-              <div><strong>WebSocket:</strong> Real-time notifications for all users</div>
+              <div>
+                <strong>Admin:</strong> Can create system notifications & manage
+                cron jobs
+              </div>
+              <div>
+                <strong>User:</strong> Can view notifications & send
+                user-to-user messages
+              </div>
+              <div>
+                <strong>WebSocket:</strong> Real-time notifications for all
+                users
+              </div>
             </CardContent>
           </Card>
 
@@ -110,18 +123,22 @@ export default function Home() {
             </CardHeader>
             <CardContent className="space-y-3">
               <button
-                onClick={() => router.push('/cronjobs')}
+                onClick={() => router.push("/cronjobs")}
                 className="w-full p-3 border rounded-lg hover:bg-gray-50 transition-colors text-left"
               >
                 <div className="font-medium">⏰ CronJob Management</div>
-                <div className="text-sm text-gray-500">Create, edit, and monitor scheduled tasks</div>
+                <div className="text-sm text-gray-500">
+                  Create, edit, and monitor scheduled tasks
+                </div>
               </button>
               <button
-                onClick={() => router.push('/admin')}
+                onClick={() => router.push("/admin")}
                 className="w-full p-3 border rounded-lg hover:bg-gray-50 transition-colors text-left"
               >
                 <div className="font-medium">👑 Full Admin Panel</div>
-                <div className="text-sm text-gray-500">Complete notification system dashboard</div>
+                <div className="text-sm text-gray-500">
+                  Complete notification system dashboard
+                </div>
               </button>
             </CardContent>
           </Card>
@@ -132,5 +149,5 @@ export default function Home() {
         </div>
       </div>
     </div>
-  )
+  );
 }
