@@ -73,7 +73,7 @@ export default function UserDashboard() {
   const [userTitle, setUserTitle] = useState('')
   const [userMessage, setUserMessage] = useState('')
   const [userType, setUserType] = useState('info')
-  const [recipientId, setRecipientId] = useState('user2')
+  const [recipient_id, setRecipientId] = useState('')
 
   const [cronJobs, setCronJobs] = useState<CronJob[]>([])
   const [allUsers, setAllUsers] = useState<User[]>([])
@@ -204,7 +204,7 @@ export default function UserDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to_user_id: recipientId,
+          to_user_id: recipient_id,
           from_user_id: user_id,
           title: userTitle,
           message: userMessage,
@@ -216,7 +216,7 @@ export default function UserDashboard() {
       if (response.ok) {
         setUserTitle('')
         setUserMessage('')
-        addMessage({ type: 'api', data: { message: `User notification sent to ${recipientId} (check their dashboard for real-time update)` }, timestamp: new Date().toISOString() })
+        addMessage({ type: 'api', data: { message: `User notification sent to ${recipient_id} (check their dashboard for real-time update)` }, timestamp: new Date().toISOString() })
       }
     } catch {
       addMessage({ type: 'error', data: { message: 'Failed to create notification' }, timestamp: new Date().toISOString() })
@@ -356,7 +356,7 @@ export default function UserDashboard() {
           <div className="p-4 border rounded-lg">
             <h3 className="text-lg font-semibold mb-4">💬 User-to-User Notification</h3>
             <div className="space-y-3">
-              <select value={recipientId} onChange={(e) => setRecipientId(e.target.value)} className="w-full px-3 py-2 border rounded">
+              <select value={recipient_id} onChange={(e) => setRecipientId(e.target.value)} className="w-full px-3 py-2 border rounded">
                 {allUsers.map((u) => (
                   <option key={u.id} value={u.id}>
                     Send to {u.email} ({u.platform_role})
